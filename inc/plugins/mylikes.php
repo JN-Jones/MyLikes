@@ -22,10 +22,10 @@ function mylikes_info()
 
 function mylikes_install()
 {
-	global $db;
+	global $db, $mybb;
 
-	$template = '<a href="javascript:addLike({$post[\'pid\']},{$post[\'uid\']}, {$likes});" title="Like" id="like_{$post[\'pid\']}"><span style="background-image: url(../../../images/valid.png);">Like</span></a>
-<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span style="padding-left: 2px; background-image: url();">({$likes}) Like(s)</span></a>';
+	$template = '<a href="javascript:addLike({$post[\'pid\']}, {$post[\'uid\']}, {$likes}, \'{$success}\', \'{$delete}\');" title="Like"><span id="like_{$post[\'pid\']}" class="mylikes_like {$liked}">Like</span></a>
+<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) Like(s)</span></a>';
 	$templatearray = array(
 		"title" => "postbit_mylikes_button",
 		"template" => $db->escape_string($template),
@@ -80,6 +80,42 @@ function mylikes_install()
 	);
 	$db->insert_query("templates", $templatearray);
 
+	// We have a custom stylesheet
+	$stylesheet = '.mylikes_like {
+    background-image: url(images/valid.png) !important;
+    filter: grayscale(100%);
+	-webkit-filter: grayscale(100%);
+	-moz-filter: grayscale(100%);
+	-ms-filter: grayscale(100%);
+	-o-filter: grayscale(100%);
+}
+
+.mylikes_like.liked {
+      filter: grayscale(0%);
+	-webkit-filter: grayscale(0%);
+	-moz-filter: grayscale(0%);
+	-ms-filter: grayscale(0%);
+	-o-filter: grayscale(0%);
+}
+
+.mylikes_likes {
+	padding-left: 2px !important;
+    background-image: url() !important;
+}';
+	$stylesheetarray = array(
+		"name"			=> "mylikes.css",
+		"tid"			=> 1,
+		"attachedto"	=> "",
+		"stylesheet"	=> $db->escape_string($stylesheet),
+		"cachefile"		=> "mylikes.css",
+		"lastmodified"	=> TIME_NOW,
+	);
+	$sid = $db->insert_query("themestylesheets", $stylesheetarray);
+
+	// Update themes...
+	require_once MYBB_ROOT.$mybb->config['admin_dir'].'/inc/functions_themes.php';
+	cache_stylesheet($stylesheetarray['tid'], $stylesheetarray['cachefile'], $stylesheet);
+	update_theme_stylesheet_list(1, false, true);
 }
 
 function mylikes_is_installed()
@@ -92,11 +128,25 @@ function mylikes_is_installed()
 
 function mylikes_uninstall()
 {
-	global $db;
+	global $db, $mybb;
 	$db->delete_query("templates", "title='postbit_mylikes_button'");
 	$db->delete_query("templates", "title='misc_mylikes'");
 	$db->delete_query("templates", "title='misc_mylikes_like'");
 	$db->delete_query("templates", "title='misc_mylikes_nolikes'");
+
+    $query = $db->simple_select('themestylesheets', 'tid,name', "name='mylikes.css'");
+
+    while($stylesheet = $db->fetch_array($query))
+    {
+        @unlink(MYBB_ROOT."cache/themes/{$stylesheet['tid']}_{$stylesheet['name']}");
+        @unlink(MYBB_ROOT."cache/themes/theme{$stylesheet['tid']}/{$stylesheet['name']}");
+    }
+
+    $db->delete_query('themestylesheets', "name='mylikes.css'");
+
+	// Update themes...
+	require_once MYBB_ROOT.$mybb->config['admin_dir'].'/inc/functions_themes.php';
+	update_theme_stylesheet_list(1, false, true);
 }
 
 function mylikes_activate()
@@ -118,17 +168,51 @@ function mylikes_deactivate()
 
 function mylikes_postbit(&$post)
 {
-	global $templates, $theme, $db, $mybb;
+	global $templates, $theme, $db, $mybb, $groupscache, $lang;
 
+	// Permissions... first: don't like yourself
 	if($mybb->input['uid'] == $post['uid'])
 	    return;
 
+	// Get the usergroup
+	if($post['userusername'])
+	{
+		if(!$post['displaygroup'])
+		{
+			$post['displaygroup'] = $post['usergroup'];
+		}
+		$usergroup = $groupscache[$post['displaygroup']];
+	}
+	else
+	{
+		$usergroup = $groupscache[1];
+	}
+
+	// This is MyBB's original check, simply added a "!"
+	if(!($mybb->settings['enablereputation'] == 1 && $mybb->settings['postrep'] == 1 && $mybb->usergroup['cangivereputations'] == 1 && $usergroup['usereputationsystem'] == 1 && $mybb->settings['posrep']))
+	{
+		return;
+	}
+
+	// Count the likes
 	$query = $db->simple_select("reputation", "SUM(reputation) AS likes", "uid={$post['uid']} AND pid={$post['pid']}");
 	$likes = $db->fetch_field($query, "likes");
 
 	if(empty($likes))
 		$likes = 0;
 
+	// Did we liked that already?
+	$liked = "";
+	$query = $db->simple_select("reputation", "rid", "uid={$post['uid']} AND pid={$post['pid']} AND adduid={$mybb->user['uid']}");
+	if($db->num_rows($query) > 0)
+	    $liked = "liked";
+
+	// We need the success message to test whether an error occured
+	$lang->load("reputation");
+	$success = str_replace("'", "\'", $lang->vote_added_message);
+	$delete = str_replace("'", "\'", $lang->vote_deleted_message);
+
+	// Get our button
 	$post['button_like'] = eval($templates->render("postbit_mylikes_button"));
 }
 
