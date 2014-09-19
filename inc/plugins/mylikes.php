@@ -171,7 +171,7 @@ function mylikes_postbit(&$post)
 	global $templates, $theme, $db, $mybb, $groupscache, $lang;
 
 	// Permissions... first: don't like yourself
-	if($mybb->input['uid'] == $post['uid'])
+	if($mybb->user['uid'] == $post['uid'])
 	    return;
 
 	// Get the usergroup
