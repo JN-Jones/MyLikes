@@ -1,4 +1,4 @@
-function addLike(pid, uid, likes, like_success, like_delete)
+function addLike(pid, uid, likes, like_success, like_delete, lang_likes, lang_like, lang_unlike)
 {
 	// Initialize our internal cache of updated likes
 	if(typeof addLike.like_cache == "undefined")
@@ -32,8 +32,12 @@ function addLike(pid, uid, likes, like_success, like_delete)
 			{
 				// And update the like counters
 				id = "#liked_"+pid;
-				$(id).text("("+(new_likes)+") Like(s)");
+				$(id).text("("+(new_likes)+") "+lang_likes);
 				$(lid).toggleClass("liked")
+				if($(lid).hasClass("liked"))
+					$(lid).text(lang_unlike);
+				else
+					$(lid).text(lang_like);
 				addLike.like_cache[pid] = new_likes;
 			}
 			// We had an error - simply open the modal
