@@ -9,7 +9,7 @@ $plugins->add_hook("misc_start", "mylikes_popup");
 
 function mylikes_info()
 {
-	global $pluginlist, $mybb, $lang, $db;
+	global $pluginlist, $mybb, $lang, $db, $cache;
 
 	if(!$pluginlist)
 		$pluginlist = $cache->read("plugins");
