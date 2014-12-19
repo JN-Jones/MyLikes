@@ -50,6 +50,13 @@ function mylikes_install()
 	$template = '<a href="javascript:addLike({$post[\'pid\']}, {$post[\'uid\']}, {$likes}, \'{$success}\', \'{$delete}\', \'{$lang->mylikes_likes}\', \'{$lang->mylikes_like}\', \'{$lang->mylikes_unlike}\');"><span id="like_{$post[\'pid\']}" class="mylikes_like {$liked}">{$mylikes}</span></a>
 <a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) {$lang->mylikes_likes}</span></a>';
 	$templatearray = array(
+		"title" => "postbit_addlikes_button",
+		"template" => $db->escape_string($template),
+		"sid" => "-2",
+	);
+	$db->insert_query("templates", $templatearray);
+		$template = '<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) {$lang->mylikes_likes}</span></a>';
+	$templatearray = array(
 		"title" => "postbit_mylikes_button",
 		"template" => $db->escape_string($template),
 		"sid" => "-2",
@@ -154,6 +161,7 @@ function mylikes_uninstall()
 	global $db, $mybb;
 	$db->delete_query("templates", "title='postbit_mylikes_button'");
 	$db->delete_query("templates", "title='misc_mylikes'");
+	$db->delete_query("templates", "title='postbit_addlikes_button'");
 	$db->delete_query("templates", "title='misc_mylikes_like'");
 	$db->delete_query("templates", "title='misc_mylikes_nolikes'");
 
@@ -194,10 +202,6 @@ function mylikes_deactivate()
 function mylikes_postbit(&$post)
 {
 	global $templates, $theme, $db, $mybb, $groupscache, $lang;
-
-	// Permissions... first: don't like yourself
-	if($mybb->user['uid'] == $post['uid'])
-	    return;
 
 	// Get the usergroup
 	if($post['userusername'])
@@ -243,8 +247,15 @@ function mylikes_postbit(&$post)
 	if(!empty($liked))
 		$mylikes = $lang->mylikes_unlike;
 
-	// Get our button
+	// Permissions... don't like yourself
+    if($mybb->user['uid'] == $post['uid']) {
 	$post['button_like'] = eval($templates->render("postbit_mylikes_button"));
+    } 
+	else 
+	{
+	// Get our liker button
+	$post['button_like'] = eval($templates->render("postbit_addlikes_button"));
+	}
 }
 
 function mylikes_popup()
