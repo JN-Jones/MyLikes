@@ -4,6 +4,9 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
+// Test whether core is installed and if so get it up
+defined("JB_CORE_INSTALLED") or require_once MYBB_ROOT."inc/plugins/jones/core/include.php";
+
 $plugins->add_hook("postbit", "mylikes_postbit");
 $plugins->add_hook("misc_start", "mylikes_popup");
 
@@ -22,8 +25,9 @@ function mylikes_info()
 		"website"		=> "http://jonesboard.de/",
 		"author"		=> "Jones",
 		"authorsite"	=> "http://jonesboard.de/",
-		"version"		=> "1.0",
-		"compatibility" => "18*"
+		"version"		=> "1.0.1",
+		"compatibility" => "18*",
+		"codename"		=> "mylikes"
 	);
 
 	if(is_array($pluginlist['active']) && in_array("mylikes", $pluginlist['active']))
@@ -33,112 +37,22 @@ function mylikes_info()
 
 		// Common errors - show messages for them
 		if($mybb->settings['enablereputation'] != 1)
-		    $info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_enablereputation, $gid);
+			$info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_enablereputation, $gid);
 		elseif($mybb->settings['postrep'] != 1)
-		    $info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_postrep, $gid);
+			$info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_postrep, $gid);
 		elseif(!$mybb->settings['posrep'])
-		    $info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_posrep, $gid);
+			$info['description'] .= "<br />".$lang->sprintf($lang->mylikes_error_posrep, $gid);
 	}
+
+	if(JB_CORE_INSTALLED === true)
+		return JB_CORE::i()->getInfo($info);
 
 	return $info;
 }
 
 function mylikes_install()
 {
-	global $db, $mybb;
-
-	$template = '<a href="javascript:addLike({$post[\'pid\']}, {$post[\'uid\']}, {$likes}, \'{$success}\', \'{$delete}\', \'{$lang->mylikes_likes}\', \'{$lang->mylikes_like}\', \'{$lang->mylikes_unlike}\');"><span id="like_{$post[\'pid\']}" class="mylikes_like {$liked}">{$mylikes}</span></a>
-<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) {$lang->mylikes_likes}</span></a>';
-	$templatearray = array(
-		"title" => "postbit_mylikes_button",
-		"template" => $db->escape_string($template),
-		"sid" => "-2",
-	);
-	$db->insert_query("templates", $templatearray);
-
-	$template = '<div class="modal">
-	<div style="overflow-y: auto; max-height: 400px;">
-		<table cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder">
-		<tr>
-			<td class="thead" colspan="2">
-				<div><strong>{$lang->mylikes_likes}</strong></div>
-			</td>
-		</tr>
-		{$users}
-		</table>
-	</div>
-</div>';
-	$templatearray = array(
-		"title" => "misc_mylikes",
-		"template" => $db->escape_string($template),
-		"sid" => "-2",
-	);
-	$db->insert_query("templates", $templatearray);
-
-	$template = '					<tr>
-						<td class="{$online_alt}" width="1%">
-							<div class="buddy_avatar float_left"><img src="{$user[\'avatar\'][\'image\']}" alt="" {$user[\'avatar\'][\'width_height\']} style="margin-top: 3px;" /></div>
-						</td>
-						<td class="{$online_alt}">
-							{$profile_link}
-							<div class="buddy_action">
-								<span class="smalltext">{$last_active}<br />{$send_pm}</span>
-							</div>
-						</td>
-					</tr>';
-	$templatearray = array(
-		"title" => "misc_mylikes_like",
-		"template" => $db->escape_string($template),
-		"sid" => "-2",
-	);
-	$db->insert_query("templates", $templatearray);
-
-	$template = '					<tr>
-						<td class="trow1" colspan="2">{$lang->mylikes_no_likes}</td>
-					</tr>';
-	$templatearray = array(
-		"title" => "misc_mylikes_nolikes",
-		"template" => $db->escape_string($template),
-		"sid" => "-2",
-	);
-	$db->insert_query("templates", $templatearray);
-
-	// We have a custom stylesheet
-	$stylesheet = '.mylikes_like {
-    background-image: url(images/valid.png) !important;
-    filter: grayscale(100%);
-	-webkit-filter: grayscale(100%);
-	-moz-filter: grayscale(100%);
-	-ms-filter: grayscale(100%);
-	-o-filter: grayscale(100%);
-}
-
-.mylikes_like.liked {
-      filter: grayscale(0%);
-	-webkit-filter: grayscale(0%);
-	-moz-filter: grayscale(0%);
-	-ms-filter: grayscale(0%);
-	-o-filter: grayscale(0%);
-}
-
-.mylikes_likes {
-	padding-left: 2px !important;
-    background-image: url() !important;
-}';
-	$stylesheetarray = array(
-		"name"			=> "mylikes.css",
-		"tid"			=> 1,
-		"attachedto"	=> "",
-		"stylesheet"	=> $db->escape_string($stylesheet),
-		"cachefile"		=> "mylikes.css",
-		"lastmodified"	=> TIME_NOW,
-	);
-	$sid = $db->insert_query("themestylesheets", $stylesheetarray);
-
-	// Update themes...
-	require_once MYBB_ROOT.$mybb->config['admin_dir'].'/inc/functions_themes.php';
-	cache_stylesheet($stylesheetarray['tid'], $stylesheetarray['cachefile'], $stylesheet);
-	update_theme_stylesheet_list(1, false, true);
+	jb_install_plugin("mylikes");
 }
 
 function mylikes_is_installed()
@@ -151,44 +65,17 @@ function mylikes_is_installed()
 
 function mylikes_uninstall()
 {
-	global $db, $mybb;
-	$db->delete_query("templates", "title='postbit_mylikes_button'");
-	$db->delete_query("templates", "title='misc_mylikes'");
-	$db->delete_query("templates", "title='misc_mylikes_like'");
-	$db->delete_query("templates", "title='misc_mylikes_nolikes'");
-
-    $query = $db->simple_select('themestylesheets', 'tid,name', "name='mylikes.css'");
-
-    while($stylesheet = $db->fetch_array($query))
-    {
-        @unlink(MYBB_ROOT."cache/themes/{$stylesheet['tid']}_{$stylesheet['name']}");
-        @unlink(MYBB_ROOT."cache/themes/theme{$stylesheet['tid']}/{$stylesheet['name']}");
-    }
-
-    $db->delete_query('themestylesheets', "name='mylikes.css'");
-
-	// Update themes...
-	require_once MYBB_ROOT.$mybb->config['admin_dir'].'/inc/functions_themes.php';
-	update_theme_stylesheet_list(1, false, true);
+	JB_Core::i()->uninstall("mylikes");
 }
 
 function mylikes_activate()
 {
-	require_once MYBB_ROOT."inc/adminfunctions_templates.php";
-	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'button_rep\']}')."#i", '{$post[\'button_like\']}');
-	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'button_rep\']}')."#i", '{$post[\'button_like\']}');
-	find_replace_templatesets("headerinclude",
-		"#".preg_quote('<script type="text/javascript" src="{$mybb->asset_url}/jscripts/general.js?ver=1800"></script>')."#i",
-		'<script type="text/javascript" src="{$mybb->asset_url}/jscripts/general.js?ver=1800"></script>
-<script type="text/javascript" src="{$mybb->asset_url}/jscripts/mylikes.js?ver=100"></script>');
+	JB_Core::i()->activate("mylikes");
 }
 
 function mylikes_deactivate()
 {
-	require_once MYBB_ROOT."inc/adminfunctions_templates.php";
-	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'button_like\']}')."#i", '{$post[\'button_rep\']}');
-	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'button_like\']}')."#i", '{$post[\'button_rep\']}');
-	find_replace_templatesets("headerinclude", "#".preg_quote('<script type="text/javascript" src="{$mybb->asset_url}/jscripts/mylikes.js?ver=100"></script>')."#i", '', 0);
+	JB_Core::i()->deactivate("mylikes");
 }
 
 function mylikes_postbit(&$post)
@@ -197,7 +84,7 @@ function mylikes_postbit(&$post)
 
 	// Permissions... first: don't like yourself
 	if($mybb->user['uid'] == $post['uid'])
-	    return;
+		return;
 
 	// Get the usergroup
 	if($post['userusername'])
@@ -230,7 +117,7 @@ function mylikes_postbit(&$post)
 	$liked = "";
 	$query = $db->simple_select("reputation", "rid", "uid={$post['uid']} AND pid={$post['pid']} AND adduid={$mybb->user['uid']}");
 	if($db->num_rows($query) > 0)
-	    $liked = "liked";
+		$liked = "liked";
 
 	// We need the success message to test whether an error occured
 	$lang->load("reputation");
@@ -252,10 +139,10 @@ function mylikes_popup()
 	global $db, $mybb, $lang, $groupscache, $templates;
 
 	if($mybb->input['action'] != "likes")
-	    return;
+		return;
 
 	if(empty($mybb->input['pid']) || empty($mybb->input['uid']))
-	    error_no_permission();
+		error_no_permission();
 
 	$lang->load("mylikes");
 
@@ -293,9 +180,8 @@ function mylikes_popup()
 	}
 
 	if(empty($users))
-	    $users = eval($templates->render("misc_mylikes_nolikes"));
+		$users = eval($templates->render("misc_mylikes_nolikes"));
 
 	echo eval($templates->render("misc_mylikes", 1, 0));
 	exit();
 }
-?>
