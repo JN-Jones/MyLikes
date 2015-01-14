@@ -39,6 +39,9 @@ function addLike(pid, uid, likes, like_success, like_delete, lang_likes, lang_li
 				else
 					$(lid).text(lang_like);
 				addLike.like_cache[pid] = new_likes;
+
+				// Try to update our cache
+				$.ajax("misc.php?action=likes_recount");
 			}
 			// We had an error - simply open the modal
 			else

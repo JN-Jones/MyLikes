@@ -107,16 +107,14 @@ function mylikes_postbit(&$post)
 	}
 
 	// Count the likes
-	$query = $db->simple_select("reputation", "SUM(reputation) AS likes", "uid={$post['uid']} AND pid={$post['pid']}");
-	$likes = $db->fetch_field($query, "likes");
+	$likes = JB_MyLikes_Like::getNumLikes($post['pid']);
 
 	if(empty($likes))
 		$likes = 0;
 
 	// Did we liked that already?
 	$liked = "";
-	$query = $db->simple_select("reputation", "rid", "uid={$post['uid']} AND pid={$post['pid']} AND adduid={$mybb->user['uid']}");
-	if($db->num_rows($query) > 0)
+	if(JB_MyLikes_Like::hasLiked($post['pid'], $mybb->user['uid']))
 		$liked = "liked";
 
 	// We need the success message to test whether an error occured
@@ -137,6 +135,14 @@ function mylikes_postbit(&$post)
 function mylikes_popup()
 {
 	global $db, $mybb, $lang, $groupscache, $templates;
+
+	if($mybb->input['action'] == "likes_recount")
+	{
+		// Rebuild the cache for this post - the reputation/like counter may have changed
+		if(!empty($mybb->input['pid']))
+			JB_MyLikes_Like::cache($mybb->input['pid']);
+		return;
+	}
 
 	if($mybb->input['action'] != "likes")
 		return;
