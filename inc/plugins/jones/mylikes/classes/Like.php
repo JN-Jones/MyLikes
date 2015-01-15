@@ -1,8 +1,8 @@
 <?php
 
-class JB_MyClasses_Like
+class JB_MyLikes_Like
 {
-	private static function cache($pid=false)
+	public static function cache($pid=false)
 	{
 		global $cache, $db;
 
@@ -49,6 +49,6 @@ class JB_MyClasses_Like
 	public static function hasLiked($pid, $uid)
 	{
 		$likes = static::get($pid);
-		return in_array($likes, $uid);
+		return in_array($uid, $likes);
 	}
 }

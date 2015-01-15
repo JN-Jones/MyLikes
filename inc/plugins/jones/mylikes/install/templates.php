@@ -38,7 +38,7 @@ $templates[] = array(
 );
 
 $templates[] = array(
-	"title"		=> "misc_mylikes_nolike",
+	"title"		=> "misc_mylikes_nolikes",
 	"template"	=> '					<tr>
 						<td class="trow1" colspan="2">{$lang->mylikes_no_likes}</td>
 					</tr>'

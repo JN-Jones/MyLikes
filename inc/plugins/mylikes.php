@@ -52,7 +52,7 @@ function mylikes_info()
 
 function mylikes_install()
 {
-	jb_install_plugin("mylikes");
+	jb_install_plugin("mylikes", array(), false, 1801);
 }
 
 function mylikes_is_installed()
@@ -82,11 +82,25 @@ function mylikes_postbit(&$post)
 {
 	global $templates, $theme, $db, $mybb, $groupscache, $lang;
 
-	// Permissions... first: don't like yourself
-	if($mybb->user['uid'] == $post['uid'])
-		return;
+	// Permissions - I hate them... First: is the reputation system enabled?
+	if($mybb->settings['enablereputation'] != 1 && $mybb->settings['postrep'] != 1)
+		return; // Nothing to do...
 
-	// Get the usergroup
+	// Language - always needed
+	$lang->load("mylikes");
+
+	// Count the likes and build the numeric button
+	$likes = JB_MyLikes_Like::getNumLikes($post['pid']);
+	$likes_button = eval($templates->render("postbit_mylikes_button_num"));
+
+	// We're viewing our own post -> nothing more todo *hurra*
+	if($mybb->user['uid'] == $post['uid'])
+	{
+		$post['button_like'] = $likes_button;
+		return;
+	}
+
+	// More fun: usergroup permissions - first: load it
 	if($post['userusername'])
 	{
 		if(!$post['displaygroup'])
@@ -100,17 +114,9 @@ function mylikes_postbit(&$post)
 		$usergroup = $groupscache[1];
 	}
 
-	// This is MyBB's original check, simply added a "!"
-	if(!($mybb->settings['enablereputation'] == 1 && $mybb->settings['postrep'] == 1 && $mybb->usergroup['cangivereputations'] == 1 && $usergroup['usereputationsystem'] == 1 && $mybb->settings['posrep']))
-	{
+	// Either the logged in user can't give likes or the post author isn't allowed to receive them :(
+	if($mybb->usergroup['cangivereputations'] != 1 && $usergroup['usereputationsystem'] != 1)
 		return;
-	}
-
-	// Count the likes
-	$likes = JB_MyLikes_Like::getNumLikes($post['pid']);
-
-	if(empty($likes))
-		$likes = 0;
 
 	// Did we liked that already?
 	$liked = "";
@@ -122,13 +128,12 @@ function mylikes_postbit(&$post)
 	$success = str_replace("'", "\'", $lang->vote_added_message);
 	$delete = str_replace("'", "\'", $lang->vote_deleted_message);
 
-	// Get our language system up
-	$lang->load("mylikes");
+	// Like or Unlike the thread?
 	$mylikes = $lang->mylikes_like;
 	if(!empty($liked))
 		$mylikes = $lang->mylikes_unlike;
 
-	// Get our button
+	// Get our buttons
 	$post['button_like'] = eval($templates->render("postbit_mylikes_button"));
 }
 
@@ -141,7 +146,7 @@ function mylikes_popup()
 		// Rebuild the cache for this post - the reputation/like counter may have changed
 		if(!empty($mybb->input['pid']))
 			JB_MyLikes_Like::cache($mybb->input['pid']);
-		return;
+		exit();
 	}
 
 	if($mybb->input['action'] != "likes")
