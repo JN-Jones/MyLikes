@@ -3,7 +3,12 @@
 $templates[] = array(
 	"title"		=> "postbit_mylikes_button",
 	"template"	=> '<a href="javascript:addLike({$post[\'pid\']}, {$post[\'uid\']}, {$likes}, \'{$success}\', \'{$delete}\', \'{$lang->mylikes_likes}\', \'{$lang->mylikes_like}\', \'{$lang->mylikes_unlike}\');"><span id="like_{$post[\'pid\']}" class="mylikes_like {$liked}">{$mylikes}</span></a>
-<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) {$lang->mylikes_likes}</span></a>'
+{$likes_button}'
+);
+
+$templates[] = array(
+	"title"		=> "postbit_mylikes_button_num",
+	"template"	=> '<a href="javascript:MyBB.popupWindow(\'/misc.php?action=likes&pid={$post[\'pid\']}&uid={$post[\'uid\']}\');" id="liked_{$post[\'pid\']}"><span class="mylikes_likes">({$likes}) {$lang->mylikes_likes}</span></a>'
 );
 
 $templates[] = array(
